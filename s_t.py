@@ -1,36 +1,19 @@
 # Importamos las librerías necesarias
 import streamlit as st
 from googletrans import Translator
-import speech_recognition as sr
-from pydub import AudioSegment
-from pydub.silence import split_on_silence
 
 # Inicializamos el traductor
 translator = Translator()
 
-# Inicializamos el reconocedor de voz
-recognizer = sr.Recognizer()
-
-# Función para reconocer el audio desde un archivo
-def recognize_from_audio(file):
-    with sr.AudioFile(file) as source:
-        audio = recognizer.record(source)
-        try:
-            text = recognizer.recognize_google(audio, language='es-ES')
-            return text
-        except sr.UnknownValueError:
-            st.error("No se pudo entender el audio.")
-        except sr.RequestError:
-            st.error("Error con el servicio de reconocimiento.")
-    return None
-
 # Título y descripción de la aplicación
 st.title("Traductor")
-st.subheader("Sube un archivo de audio para traducirlo, o ingresa el texto manualmente.")
+st.subheader("Introduce el texto que deseas traducir.")
 
 # Descripción adicional en la barra lateral
 st.sidebar.header("Traductor")
-st.sidebar.write("Sube un archivo de audio, o ingresa el texto manualmente para traducirlo.")
+st.sidebar.write(
+    "Introduce el texto manualmente para traducirlo."
+)
 
 # Mapeo de los lenguajes disponibles
 input_languages = {
@@ -57,20 +40,11 @@ out_lang = st.sidebar.selectbox(
 )
 output_language = input_languages[out_lang]  # Código del idioma seleccionado
 
-# Opción para elegir entre texto escrito o archivo de audio
-option = st.radio("¿Cómo quieres ingresar el texto?", ("Escribir", "Subir archivo de audio"))
-
-# Área de texto o subir archivo de audio
-text_to_translate = None
-if option == "Escribir":
-    text_to_translate = st.text_area(
-        "Escribe lo que deseas traducir", 
-        placeholder="Introduce tu texto aquí..."
-    )
-else:
-    audio_file = st.file_uploader("Sube un archivo de audio", type=["wav", "mp3"])
-    if audio_file is not None:
-        text_to_translate = recognize_from_audio(audio_file)
+# Área de texto para ingresar lo que se desea traducir
+text_to_translate = st.text_area(
+    "Escribe lo que deseas traducir", 
+    placeholder="Introduce tu texto aquí..."
+)
 
 # Botón para realizar la traducción
 if st.button("Traducir"):
@@ -88,17 +62,18 @@ if st.button("Traducir"):
         except Exception as e:
             st.error(f"Error en la traducción: {e}")
     else:
-        st.warning("Por favor, introduce un texto o sube un archivo de audio para traducir.")
+        st.warning("Por favor, introduce un texto para traducir.")
 
 # Imagen decorativa
 st.image(
     "https://cdn.pixabay.com/photo/2016/12/13/14/55/robot-1900721_960_720.jpg", 
-    caption="Sube un archivo de audio o ingresa el texto."
+    caption="Introduce el texto para traducir."
 )
 
 # Pie de página
 st.write("---")
 st.write("Desarrollado con ❤️ por Isabella Mejía.")
+
 
 
 
