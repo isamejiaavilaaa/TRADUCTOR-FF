@@ -6,8 +6,8 @@ from googletrans import Translator
 translator = Translator()
 
 # Título y descripción de la aplicación
-st.title("TRADUCTOR.")
-st.subheader("Escucho lo que quieres traducir.")
+st.title("Traductor")
+st.subheader("Presiona el botón, cuando escuches la señal habla lo que quieres traducir, luego selecciona la configuración de lenguaje que necesites.")
 
 # Descripción adicional en la barra lateral
 st.sidebar.header("Traductor")
@@ -68,12 +68,13 @@ if st.button("Traducir"):
 # Imagen decorativa
 st.image(
     "https://cdn.pixabay.com/photo/2016/12/13/14/55/robot-1900721_960_720.jpg", 
-    caption="Toca el Botón y habla lo que quieres traducir"
+    caption="Presiona el Botón y habla lo que quieres traducir"
 )
 
 # Pie de página
 st.write("---")
 st.write("Desarrollado con ❤️ por Isabella Mejía.")
+
 
 
 
