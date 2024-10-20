@@ -1,9 +1,29 @@
 # Importamos las librerías necesarias
 import streamlit as st
 from googletrans import Translator
+import speech_recognition as sr
 
 # Inicializamos el traductor
 translator = Translator()
+
+# Inicializamos el reconocedor de voz
+recognizer = sr.Recognizer()
+
+# Función para capturar la entrada de audio y convertirla en texto
+def get_audio():
+    with sr.Microphone() as source:
+        st.write("Escuchando...")
+        audio = recognizer.listen(source)
+        try:
+            # Usamos Google para reconocer el audio
+            text = recognizer.recognize_google(audio, language='es-ES')
+            st.write(f"Texto detectado: {text}")
+            return text
+        except sr.UnknownValueError:
+            st.error("No se entendió lo que dijiste.")
+        except sr.RequestError:
+            st.error("Error en el servicio de reconocimiento de voz.")
+        return None
 
 # Título y descripción de la aplicación
 st.title("Traductor")
@@ -41,11 +61,18 @@ out_lang = st.sidebar.selectbox(
 )
 output_language = input_languages[out_lang]  # Código del idioma seleccionado
 
-# Área de texto para ingresar lo que se desea traducir
-text_to_translate = st.text_area(
-    "Escribe o habla lo que deseas traducir", 
-    placeholder="Introduce tu texto aquí..."
-)
+# Opción para elegir entre texto escrito o hablado
+option = st.radio("¿Cómo quieres ingresar el texto?", ("Escribir", "Hablar"))
+
+# Área de texto o botón para capturar audio
+if option == "Escribir":
+    text_to_translate = st.text_area(
+        "Escribe o habla lo que deseas traducir", 
+        placeholder="Introduce tu texto aquí..."
+    )
+else:
+    if st.button("Hablar ahora"):
+        text_to_translate = get_audio()  # Llamamos a la función para capturar el audio
 
 # Botón para realizar la traducción
 if st.button("Traducir"):
@@ -63,7 +90,7 @@ if st.button("Traducir"):
         except Exception as e:
             st.error(f"Error en la traducción: {e}")
     else:
-        st.warning("Por favor, introduce un texto para traducir.")
+        st.warning("Por favor, introduce o habla un texto para traducir.")
 
 # Imagen decorativa
 st.image(
@@ -74,6 +101,7 @@ st.image(
 # Pie de página
 st.write("---")
 st.write("Desarrollado con ❤️ por Isabella Mejía.")
+
 
 
 
