@@ -73,7 +73,7 @@ st.image(
 
 # Pie de página
 st.write("---")
-st.write("Desarrollado con ❤️ por [Tu Nombre].")
+st.write("Desarrollado con ❤️ por Isabella Mejía.")
 
 
 
