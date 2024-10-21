@@ -1,69 +1,50 @@
 import streamlit as st
+from audio_recorder_streamlit import audio_recorder
+import speech_recognition as sr
 from googletrans import Translator
-from gtts import gTTS
+import tempfile
 import os
-import base64
-
-# Función para generar y reproducir audio
-def text_to_speech(text, language):
-    try:
-        # Crear el objeto gTTS
-        tts = gTTS(text=text, lang=language, slow=False)
-        
-        # Guardar temporalmente el archivo
-        audio_file = "temp_audio.mp3"
-        tts.save(audio_file)
-        
-        # Leer el archivo y codificarlo en base64
-        with open(audio_file, "rb") as file:
-            audio_bytes = file.read()
-            b64 = base64.b64encode(audio_bytes).decode()
-            
-        # Eliminar el archivo temporal
-        os.remove(audio_file)
-        
-        # Crear el elemento de audio HTML
-        audio_html = f'''
-            <audio controls>
-                <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
-                Tu navegador no soporta el elemento de audio.
-            </audio>
-            '''
-        return audio_html
-    except Exception as e:
-        return str(e)
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Traductor con Audio",
-    page_icon="🎧",
+    page_title="Traductor de Voz",
+    page_icon="🎙️",
     layout="centered"
 )
 
-# Inicializar el traductor
-translator = Translator()
+# Estilos CSS personalizados
+st.markdown("""
+    <style>
+    .main {
+        padding: 2rem;
+    }
+    .stButton > button {
+        width: 100%;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # Título y descripción
-st.title("🎧 Traductor con Audio")
-st.markdown("Traduce texto y escucha la pronunciación")
+st.title("🎙️ Traductor de Voz")
+st.markdown("Graba tu voz y obtén la traducción en texto")
 
-# Diccionario de idiomas soportados (ajustado para gTTS)
+# Diccionario de idiomas soportados
 LANGUAGES = {
-    "Español": "es",
-    "Inglés": "en",
-    "Francés": "fr",
-    "Alemán": "de",
-    "Italiano": "it",
-    "Portugués": "pt",
-    "Japonés": "ja",
-    "Chino": "zh-CN"
+    "Español": {"code": "es", "speech_code": "es-ES"},
+    "Inglés": {"code": "en", "speech_code": "en-US"},
+    "Francés": {"code": "fr", "speech_code": "fr-FR"},
+    "Alemán": {"code": "de", "speech_code": "de-DE"},
+    "Italiano": {"code": "it", "speech_code": "it-IT"},
+    "Portugués": {"code": "pt", "speech_code": "pt-BR"}
 }
+
+# Inicializar el traductor
+translator = Translator()
 
 # Configuración en la barra lateral
 with st.sidebar:
     st.header("⚙️ Configuración")
     
-    # Selección de idiomas
     source_lang = st.selectbox(
         "Idioma de origen:",
         options=list(LANGUAGES.keys()),
@@ -76,42 +57,83 @@ with st.sidebar:
         index=1
     )
 
-# Área de texto para entrada
-input_text = st.text_area(
-    "Texto a traducir:",
-    height=150,
-    placeholder="Escribe aquí el texto que deseas traducir..."
+# Función para transcribir audio
+def transcribe_audio(audio_bytes, language):
+    try:
+        # Guardar el audio temporalmente
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_audio:
+            temp_audio.write(audio_bytes)
+            temp_audio_path = temp_audio.name
+
+        # Inicializar el reconocedor
+        recognizer = sr.Recognizer()
+        
+        # Transcribir el audio
+        with sr.AudioFile(temp_audio_path) as source:
+            audio_data = recognizer.record(source)
+            text = recognizer.recognize_google(audio_data, language=language)
+            
+        # Limpiar archivo temporal
+        os.remove(temp_audio_path)
+        
+        return text
+    except Exception as e:
+        st.error(f"Error en la transcripción: {str(e)}")
+        return None
+
+# Contenedor principal
+st.markdown("### 🎤 Grabación de voz")
+st.write("Haz clic en el botón para empezar a grabar:")
+
+# Grabador de audio
+audio_bytes = audio_recorder(
+    text="Grabar audio",
+    recording_color="#e74c3c",
+    neutral_color="#3498db",
+    icon_name="microphone"
 )
 
-# Botón de traducción
-if st.button("Traducir y Generar Audio"):
-    if input_text:
-        try:
-            # Realizar traducción
-            translation = translator.translate(
-                input_text,
-                src=LANGUAGES[source_lang],
-                dest=LANGUAGES[target_lang]
-            )
+if audio_bytes:
+    # Mostrar el audio grabado
+    st.audio(audio_bytes, format="audio/wav")
+    
+    with st.spinner('Transcribiendo audio...'):
+        # Transcribir el audio
+        transcribed_text = transcribe_audio(
+            audio_bytes,
+            LANGUAGES[source_lang]["speech_code"]
+        )
+        
+        if transcribed_text:
+            # Mostrar texto transcrito
+            st.markdown("### 📝 Texto reconocido:")
+            st.success(transcribed_text)
             
-            # Mostrar resultado
-            st.markdown("### Traducción:")
-            st.info(translation.text)
-            
-            # Generar y mostrar audio
-            st.markdown("### Audio de la traducción:")
-            audio_html = text_to_speech(translation.text, LANGUAGES[target_lang])
-            st.markdown(audio_html, unsafe_allow_html=True)
-            
-            # Mostrar transcripción fonética (si está disponible)
-            if hasattr(translation, 'pronunciation') and translation.pronunciation:
-                st.markdown("### Pronunciación:")
-                st.text(translation.pronunciation)
-            
-        except Exception as e:
-            st.error(f"Error en la traducción o generación de audio. Por favor, intenta nuevamente.")
-    else:
-        st.warning("Por favor, ingresa un texto para traducir.")
+            with st.spinner('Traduciendo...'):
+                try:
+                    # Realizar traducción
+                    translation = translator.translate(
+                        transcribed_text,
+                        src=LANGUAGES[source_lang]["code"],
+                        dest=LANGUAGES[target_lang]["code"]
+                    )
+                    
+                    # Mostrar traducción
+                    st.markdown("### 🔄 Traducción:")
+                    st.info(translation.text)
+                    
+                except Exception as e:
+                    st.error("Error en la traducción. Por favor, intenta nuevamente.")
+
+# Instrucciones de uso
+with st.expander("📋 Instrucciones de uso"):
+    st.markdown("""
+    1. Selecciona el idioma de origen y destino en la barra lateral
+    2. Haz clic en el botón "Grabar audio"
+    3. Habla claramente en el idioma seleccionado
+    4. Haz clic nuevamente para detener la grabación
+    5. Espera a que se procese la traducción
+    """)
 
 # Pie de página
 st.markdown("---")
