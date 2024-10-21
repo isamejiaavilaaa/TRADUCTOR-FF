@@ -19,3 +19,9 @@ Streamlit-bokeh-events
 SpeechRecognition==3.8.1
 pydub  # Si vas a trabajar con audio en otros formatos
 
+streamlit
+googletrans==3.1.0a0
+gTTS==2.3.2
+SpeechRecognition==3.10.0
+audio-recorder-streamlit==0.0.8
+
