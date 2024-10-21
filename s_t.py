@@ -1,22 +1,22 @@
 # Importamos las librerías necesarias
 import streamlit as st
-import speech_recognition as sr
 from googletrans import Translator
-from pydub import AudioSegment
-import os
+import speech_recognition as sr  # Reconocimiento de voz
 
-# Inicializamos el traductor y el reconocedor de voz
+# Inicializamos el traductor
 translator = Translator()
+
+# Inicializamos el reconocimiento de voz
 recognizer = sr.Recognizer()
 
 # Título y descripción de la aplicación
-st.title("Traductor de Voz (por Archivo)")
-st.subheader("Sube tu archivo de audio para traducir.")
+st.title("Traductor con Voz")
+st.subheader("Presiona el botón y habla lo que deseas traducir o ingresa texto manualmente.")
 
 # Descripción adicional en la barra lateral
-st.sidebar.header("Traductor de Voz")
+st.sidebar.header("Traductor")
 st.sidebar.write(
-    "Sube un archivo de audio en uno de los idiomas disponibles y selecciona el idioma al que quieres traducir."
+    "Presiona el botón, habla cuando escuches la señal y selecciona la configuración de lenguaje que necesites."
 )
 
 # Mapeo de los lenguajes disponibles
@@ -44,54 +44,64 @@ out_lang = st.sidebar.selectbox(
 )
 output_language = input_languages[out_lang]  # Código del idioma seleccionado
 
-# Subida del archivo de audio
-audio_file = st.file_uploader("Sube tu archivo de audio (en formato WAV o MP3)", type=["wav", "mp3"])
+# Opción de usar reconocimiento de voz o ingresar texto manualmente
+use_voice = st.checkbox("Usar reconocimiento de voz")
 
-# Procesamiento del archivo de audio
-if audio_file is not None:
-    st.write("Archivo subido correctamente.")
+if use_voice:
+    # Grabación de voz a través del micrófono
+    st.info("Presiona el botón y habla cuando escuches la señal")
     
-    # Guardar temporalmente el archivo de audio para procesarlo
-    with open("temp_audio_file", "wb") as f:
-        f.write(audio_file.getbuffer())
-    
-    # Convertir el archivo a un formato que speech_recognition pueda manejar
-    if audio_file.name.endswith(".mp3"):
-        audio = AudioSegment.from_mp3("temp_audio_file")
-        audio.export("converted.wav", format="wav")
-        audio_path = "converted.wav"
-    else:
-        audio_path = "temp_audio_file"  # El archivo ya es WAV
+    if st.button("Grabar voz"):
+        with sr.Microphone() as source:
+            st.info("Escuchando...")
+            try:
+                # Ajustamos el ruido ambiental y capturamos la voz
+                recognizer.adjust_for_ambient_noise(source)
+                audio = recognizer.listen(source)
+                st.info("Reconociendo...")
+                
+                # Convertimos la voz a texto
+                text_to_translate = recognizer.recognize_google(audio, language=input_language)
+                st.success(f"Texto reconocido: {text_to_translate}")
+            except sr.UnknownValueError:
+                st.error("No se pudo entender el audio. Por favor, intenta nuevamente.")
+            except sr.RequestError as e:
+                st.error(f"No se pudo conectar con el servicio de reconocimiento de voz; {e}")
+else:
+    # Área de texto para ingresar lo que se desea traducir
+    text_to_translate = st.text_area(
+        "Escribe lo que deseas traducir", 
+        placeholder="Introduce tu texto aquí..."
+    )
 
-    # Reconocimiento de voz desde el archivo cargado
-    with sr.AudioFile(audio_path) as source:
-        st.write("Procesando el audio...")
-        audio_data = recognizer.record(source)
-        
+# Botón para realizar la traducción
+if st.button("Traducir"):
+    if text_to_translate:
+        # Realizamos la traducción
         try:
-            # Reconocimiento de voz (asegurarse de que el idioma sea soportado por Google)
-            recognized_text = recognizer.recognize_google(audio_data, language=input_language)
-            st.write(f"Texto reconocido: {recognized_text}")
-            
-            # Realizar la traducción
-            translation = translator.translate(recognized_text, src=input_language, dest=output_language)
+            translation = translator.translate(
+                text_to_translate, 
+                src=input_language, 
+                dest=output_language
+            )
+            # Mostramos el resultado
             st.success("Traducción exitosa:")
             st.write(f"**{translation.text}**")
-        
-        except sr.UnknownValueError:
-            st.error("No se pudo entender el audio, por favor intenta con otro archivo.")
-        except sr.RequestError as e:
-            st.error(f"Error con el servicio de reconocimiento de voz; {e}")
-    
-    # Limpieza de archivos temporales
-    os.remove(audio_path)
-    os.remove("temp_audio_file")
-else:
-    st.write("Por favor sube un archivo de audio para traducir.")
+        except Exception as e:
+            st.error(f"Error en la traducción: {e}")
+    else:
+        st.warning("Por favor, introduce un texto para traducir.")
+
+# Imagen decorativa
+st.image(
+    "https://cdn.pixabay.com/photo/2016/12/13/14/55/robot-1900721_960_720.jpg", 
+    caption="Presiona el botón y habla lo que quieres traducir."
+)
 
 # Pie de página
 st.write("---")
 st.write("Desarrollado con ❤️ por Isabella Mejía.")
+
 
 
 
