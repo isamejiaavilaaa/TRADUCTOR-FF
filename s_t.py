@@ -70,27 +70,34 @@ def transcribe_audio(audio_bytes, language):
         
         # Transcribir el audio
         with sr.AudioFile(temp_audio_path) as source:
-            audio_data = recognizer.record(source)
+            audio_data = recognizer.record(source, duration=30)  # Limitar a 30 segundos
             text = recognizer.recognize_google(audio_data, language=language)
             
         # Limpiar archivo temporal
         os.remove(temp_audio_path)
         
         return text
+    except sr.UnknownValueError:
+        st.error("No se pudo entender el audio. Por favor, intenta nuevamente.")
+        return None
+    except sr.RequestError as e:
+        st.error(f"Error en el servicio de reconocimiento de voz: {str(e)}")
+        return None
     except Exception as e:
-        st.error(f"Error en la transcripción: {str(e)}")
+        st.error(f"Error inesperado: {str(e)}")
         return None
 
 # Contenedor principal
 st.markdown("### 🎤 Grabación de voz")
-st.write("Haz clic en el botón para empezar a grabar:")
+st.write("Haz clic en el botón para empezar a grabar (máximo 30 segundos):")
 
 # Grabador de audio
 audio_bytes = audio_recorder(
     text="Grabar audio",
     recording_color="#e74c3c",
     neutral_color="#3498db",
-    icon_name="microphone"
+    icon_name="microphone",
+    pause_threshold=30  # Límite de duración en segundos
 )
 
 if audio_bytes:
@@ -128,11 +135,11 @@ if audio_bytes:
 # Instrucciones de uso
 with st.expander("📋 Instrucciones de uso"):
     st.markdown("""
-    1. Selecciona el idioma de origen y destino en la barra lateral
-    2. Haz clic en el botón "Grabar audio"
-    3. Habla claramente en el idioma seleccionado
-    4. Haz clic nuevamente para detener la grabación
-    5. Espera a que se procese la traducción
+    1. Selecciona el idioma de origen y destino en la barra lateral.
+    2. Haz clic en el botón "Grabar audio".
+    3. Habla claramente en el idioma seleccionado (máximo 30 segundos).
+    4. Haz clic nuevamente para detener la grabación.
+    5. Espera a que se procese la traducción.
     """)
 
 # Pie de página
